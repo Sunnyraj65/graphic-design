@@ -154,26 +154,54 @@ export function useSupabaseImages() {
   // Upload image file to Supabase Storage
   const uploadImageFile = async (file: File): Promise<string> => {
     try {
+      // Check if file is valid
+      if (!file || file.size === 0) {
+        throw new Error('Invalid file');
+      }
+
+      // Check file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        throw new Error('File size too large (max 10MB)');
+      }
+
+      // Check file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        throw new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.');
+      }
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `portfolio/${fileName}`;
+
+      console.log('Uploading file:', fileName, 'Size:', file.size, 'Type:', file.type);
 
       const { error: uploadError } = await supabase.storage
         .from('images')
         .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
 
       const { data } = supabase.storage
         .from('images')
         .getPublicUrl(filePath);
 
+      console.log('Upload successful, URL:', data.publicUrl);
       return data.publicUrl;
     } catch (error) {
       console.error('Error uploading file:', error);
+      
+      let errorMessage = "Failed to upload image file";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to upload image file",
+        description: errorMessage,
         variant: "destructive",
       });
       throw error;
