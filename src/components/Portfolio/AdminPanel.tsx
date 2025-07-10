@@ -19,12 +19,22 @@ interface GalleryImage {
 interface AdminPanelProps {
   images: GalleryImage[];
   categories: string[];
+  loading?: boolean;
   onAddImage: (image: Omit<GalleryImage, 'id'>) => void;
   onRemoveImage: (id: string) => void;
   onAddCategory: (category: string) => void;
+  uploadImageFile?: (file: File) => Promise<string>;
 }
 
-export default function AdminPanel({ images, categories, onAddImage, onRemoveImage, onAddCategory }: AdminPanelProps) {
+export default function AdminPanel({ 
+  images, 
+  categories, 
+  loading = false,
+  onAddImage, 
+  onRemoveImage, 
+  onAddCategory,
+  uploadImageFile = async () => { throw new Error('Upload function not provided'); }
+}: AdminPanelProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [showImages, setShowImages] = useState(true);
@@ -81,8 +91,8 @@ export default function AdminPanel({ images, categories, onAddImage, onRemoveIma
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
         
-        // Create object URL for preview (in production, upload to cloud storage)
-        const imageUrl = URL.createObjectURL(file);
+        // Upload file to Supabase Storage
+        const imageUrl = await uploadImageFile(file);
         
         const imageData = {
           url: imageUrl,
@@ -91,13 +101,13 @@ export default function AdminPanel({ images, categories, onAddImage, onRemoveIma
           description: newImageData.description || `Image ${i + 1} from ${newImageData.category} category`
         };
 
-        onAddImage(imageData);
+        await onAddImage(imageData);
       }
 
       // Add category if it doesn't exist
       const categoryLower = newImageData.category.trim().toLowerCase();
       if (!categories.includes(categoryLower)) {
-        onAddCategory(categoryLower);
+        await onAddCategory(categoryLower);
       }
 
       // Reset form
@@ -120,7 +130,9 @@ export default function AdminPanel({ images, categories, onAddImage, onRemoveIma
   };
 
   const handleRemoveImage = (id: string) => {
-    onRemoveImage(id);
+    onRemoveImage(id).catch(() => {
+      // Error handling is done in the hook
+    });
     toast({
       title: "Image Removed",
       description: "Image has been removed from your portfolio.",
@@ -129,7 +141,9 @@ export default function AdminPanel({ images, categories, onAddImage, onRemoveIma
 
   const handleAddCategory = () => {
     if (!newCategory.trim()) return;
-    onAddCategory(newCategory.trim().toLowerCase());
+    onAddCategory(newCategory.trim().toLowerCase()).catch(() => {
+      // Error handling is done in the hook
+    });
     setNewCategory("");
     toast({
       title: "Category Added",

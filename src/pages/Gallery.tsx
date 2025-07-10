@@ -3,7 +3,19 @@ import { Badge } from "@/components/ui/badge";
 import { useImages } from "@/contexts/ImageContext";
 
 export default function Gallery() {
-  const { images, categories } = useImages();
+  const { images, categories, loading } = useImages();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-subtle py-12">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12 space-y-4">
+            <div className="text-xl text-muted-foreground">Loading gallery...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-subtle py-12">
